@@ -1,0 +1,33 @@
+server:
+  forward-headers-strategy: framework
+  port: 8080
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
+
+logging:
+  level:
+    ch.so.agi: ${LOG_LEVEL_APP:DEBUG} 
+    org.springframework: ${LOG_LEVEL_FRAMEWORK:INFO} 
+
+app:
+  proxyMode: ${PROXY_MODE:redirect} 
+  #mode: proxy
+
+oereb: 
+  services:
+    - canton: BL
+      serviceEndpoint: https://oereb.geo.bl.ch/
+    - canton: SO
+      serviceEndpoint: https://geo.so.ch/api/oereb/
+    - identifier: TG
+      serviceEndpoint: https://map.geo.tg.ch/services/oereb/
+

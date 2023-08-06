@@ -94,9 +94,9 @@ public class MainController {
             log.debug("coordinate: {}", coord);
         }
         
-        // Kanton via geo.admin.ch rest api eruieren.
+        // Betroffener Kanton via geo.admin.ch rest api eruieren.
         String canton = getCantonFromCoord(coord);
-        log.debug("canton by service request: " + canton);
+        log.debug("canton from rest service request: " + canton);
         
         // ÖREB-Webservice-URL des betroffenen Kantons aus den Settings lesen.
         String serviceEndpoint = oerebServiceProperties.getServices().get(canton.toUpperCase());
@@ -116,7 +116,7 @@ public class MainController {
             cantonUrl += entry.getKey() + "=" + entry.getValue();
             i++;
         }
-        log.debug("canton url: {}", cantonUrl);
+        log.debug("ows request url: {}", cantonUrl);
         
         URI cantonUri = new URI(cantonUrl);
 
@@ -129,8 +129,8 @@ public class MainController {
             int statusCode = response.statusCode();
             String contentType = response.headers().firstValue("content-type").orElse("text/plain"); // Bewusst, zwecks Debugging.
             
-            log.debug("status code: {}", statusCode);
-            log.debug("content type: {}", contentType);
+            log.debug("ows response status code: {}", statusCode);
+            log.debug("ows content type: {}", contentType);
             
             InputStreamResource inputStreamResource = new InputStreamResource(response.body());
             HttpHeaders httpHeaders = new HttpHeaders();

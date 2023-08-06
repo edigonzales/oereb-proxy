@@ -19,7 +19,7 @@ compileJava {
 }
 
 bootJar {
-   archiveName = baseName + "-" + version + "-exec.jar"
+   archiveFileName = archiveBaseName.get() + "-" + version + "-exec.jar"
 }
 
 repositories {

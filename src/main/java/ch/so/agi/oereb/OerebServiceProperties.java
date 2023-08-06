@@ -1,5 +1,6 @@
 package ch.so.agi.oereb;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -9,13 +10,13 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "oereb")
 public class OerebServiceProperties {
-    private List<Map<String,String>> services;
+    private HashMap<String,String> services;
 
-    public List<Map<String, String>> getServices() {
+    public HashMap<String, String> getServices() {
         return services;
     }
 
-    public void setServices(List<Map<String, String>> services) {
+    public void setServices(HashMap<String, String> services) {
         this.services = services;
     }
 }

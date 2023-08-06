@@ -19,15 +19,16 @@ logging:
     org.springframework: ${LOG_LEVEL_FRAMEWORK:INFO} 
 
 app:
-  proxyMode: ${PROXY_MODE:redirect} 
-  #mode: proxy
+  proxyMode: ${PROXY_MODE:proxy} 
+  # proxy,redirect
+  cantonServiceUrl: ${CANTON_SERVICE_URL:https://api3.geo.admin.ch/rest/services/all/MapServer/identify?geometryFormat=geojson&geometryType=esriGeometryPoint&lang=en&layers=all:ch.swisstopo.swissboundaries3d-kanton-flaeche.fill&limit=1&returnGeometry=false&sr=2056&tolerance=0&geometry=}
+  reframeServiceUrl: ${REFRAME_SERVICE_URL:https://geodesy.geo.admin.ch/reframe/wgs84tolv95}
 
+  
 oereb: 
   services:
-    - canton: BL
-      serviceEndpoint: https://oereb.geo.bl.ch/
-    - canton: SO
-      serviceEndpoint: https://geo.so.ch/api/oereb/
-    - identifier: TG
-      serviceEndpoint: https://map.geo.tg.ch/services/oereb/
+    BL: https://oereb.geo.bl.ch/
+    SO: https://geo.so.ch/api/oereb/
+    TG: https://map.geo.tg.ch/services/oereb/
+    VS: https://rdppfvs.geopol.ch/ 
 

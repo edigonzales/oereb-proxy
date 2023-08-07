@@ -95,34 +95,40 @@ public class MainController {
         }
         
         // Betroffener Kanton via geo.admin.ch rest api eruieren.
-        String canton = getCantonFromCoord(coord);
-        log.debug("canton from rest service request: " + canton);
+        // Falls der Kanton nicht gefunden werden kann, wird 204 
+        // zurückgeliefert. Beim Parsen der Antwort werden Exceptions
+        // geworfen, wenn kein Kanton in der Antwort vorhanden ist.
+        String canton = null;
+        try {
+            canton = getCantonFromCoord(coord);
+            log.debug("canton from rest service request: " + canton);
+        } catch (NullPointerException e) {            
+            return new ResponseEntity<Object>(HttpStatus.NO_CONTENT);
+        }
         
         // ÖREB-Webservice-URL des betroffenen Kantons aus den Settings lesen.
         String serviceEndpoint = oerebServiceProperties.getServices().get(canton.toUpperCase());
         log.debug("service endpoint: {}", serviceEndpoint);
         
-        String cantonUrl = "https://geo.so.ch/api/oereb/" + "getegrid/xml/";
-        
-        
+        String requestUrl = serviceEndpoint + "getegrid/xml/";
         
         int i=0;
         for (Map.Entry<String, String> entry : queryParameters.entrySet()) {
             if (i==0) {
-                cantonUrl += "?";
+                requestUrl += "?";
             } else {
-                cantonUrl += "&";
+                requestUrl += "&";
             }
-            cantonUrl += entry.getKey() + "=" + entry.getValue();
+            requestUrl += entry.getKey() + "=" + entry.getValue();
             i++;
         }
-        log.debug("ows request url: {}", cantonUrl);
+        log.debug("ows request url: {}", requestUrl);
         
-        URI cantonUri = new URI(cantonUrl);
+        URI requestUri = new URI(requestUrl);
 
         if (proxyMode.equalsIgnoreCase("proxy")) {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
-            requestBuilder.GET().uri(cantonUri);
+            requestBuilder.GET().uri(requestUri);
             HttpRequest request = requestBuilder.timeout(Duration.ofMinutes(2L)).build();
 
             HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
@@ -138,7 +144,7 @@ public class MainController {
             return new ResponseEntity<>(inputStreamResource, httpHeaders, HttpStatus.valueOf(statusCode));
         } else {
             HttpHeaders httpHeaders = new HttpHeaders();
-            httpHeaders.setLocation(cantonUri);
+            httpHeaders.setLocation(requestUri);
             return new ResponseEntity<>(httpHeaders, HttpStatus.SEE_OTHER);        
         }
     }
@@ -161,9 +167,9 @@ public class MainController {
             ArrayList<Object> resultList = (ArrayList<Object>) responseObj.get("results");
             HashMap<String,Object> properties = (HashMap<String, Object>) ((HashMap<String,Object>)resultList.get(0)).get("properties");
             canton = (String) properties.get("ak");
-        } catch (NullPointerException e) {
+        } catch (NullPointerException | IndexOutOfBoundsException e) {
             e.printStackTrace();
-            throw new IllegalArgumentException(e.getMessage());
+            throw new NullPointerException(e.getMessage());
         }
         
         return canton;

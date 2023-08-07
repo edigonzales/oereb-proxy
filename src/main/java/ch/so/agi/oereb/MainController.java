@@ -20,17 +20,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.util.UriComponents;
-import org.springframework.web.util.UriComponentsBuilder;
-
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
@@ -46,6 +39,9 @@ public class MainController {
 
     @Value("${app.cantonServiceUrl}")
     private String cantonServiceUrl;
+
+    @Value("${app.egridServiceUrl}")
+    private String egridServiceUrl;
 
     @Value("${app.reframeServiceUrl}")
     private String reframeServiceUrl;
@@ -67,6 +63,18 @@ public class MainController {
     
     // TODO:
     // - PDF 
+    
+    @GetMapping("/extract/xml/")
+    public ResponseEntity<Object> getExtract(@RequestParam Map<String, String> queryParameters) {
+        String egrid = queryParameters.get(PARAM_EGRID);
+        log.debug("egrid: {}", egrid);
+        
+        // getCantonFromEgrid()
+
+        
+        return null;
+    }
+    
 
     @GetMapping("/getegrid/xml/")
     public ResponseEntity<Object> getEgrid(@RequestParam Map<String, String> queryParameters) throws URISyntaxException, IOException, InterruptedException {
@@ -77,7 +85,7 @@ public class MainController {
             // Wahrscheinlich würde es mit Adresse noch funktionieren, indem man
             // die Adresse sucht und anhand der Koordinate ein zweite Suche
             // macht.
-            // Aber NBIdent und GB-Nummer ist m.E. chancenlos, kann nicht mit
+            // Aber NBIdent und GB-Nummer ist m.E. chancenlos. Kann nicht mit
             // map.geo irgendwas punkt ch gelöst werden. 
             // Nur mit allen Endpunkten absuchen, was zu langsam ist.
             throw new IllegalArgumentException("parameter EN or GNSS expected");
@@ -106,7 +114,6 @@ public class MainController {
         } catch (NullPointerException e) {            
             return new ResponseEntity<Object>(HttpStatus.NO_CONTENT);
         }
-        log.debug("canton from rest service request: {}", canton);
         
         // ÖREB-Webservice-URL des betroffenen Kantons aus den Settings lesen.
         String serviceEndpoint = oerebServiceProperties.getServices().get(canton.toUpperCase());

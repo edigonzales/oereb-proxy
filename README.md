@@ -11,3 +11,9 @@
 - http://localhost:8080/getegrid/xml/?EN=2600595,1215629
 - http://localhost:8080/getegrid/xml/?IDENTDN=SO0200002457&NUMBER=168
 - http://localhost:8080/getegrid/xml/?GNSS=7.44646,47.09171
+
+- https://geo.so.ch/api/oereb/extract/xml/?EGRID=CH807306583219
+- http://localhost:8080/extract/xml/?EGRID=CH807306583219
+
+## Unterschiede zur Spez
+

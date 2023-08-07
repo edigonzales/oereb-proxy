@@ -77,8 +77,9 @@ public class MainController {
             // Wahrscheinlich würde es mit Adresse noch funktionieren, indem man
             // die Adresse sucht und anhand der Koordinate ein zweite Suche
             // macht.
-            // Aber NBIdent und GB-Nummer ist m.E. chancenlos. Ohne alle
-            // Endpunkte abzusuchen.
+            // Aber NBIdent und GB-Nummer ist m.E. chancenlos, kann nicht mit
+            // map.geo irgendwas punkt ch gelöst werden. 
+            // Nur mit allen Endpunkten absuchen, was zu langsam ist.
             throw new IllegalArgumentException("parameter EN or GNSS expected");
         }
         
@@ -96,7 +97,7 @@ public class MainController {
         
         // Betroffener Kanton via geo.admin.ch rest api eruieren.
         String canton = getCantonFromCoord(coord);
-        log.debug("canton from rest service request: " + canton);
+        log.debug("canton from rest service request: {}", canton);
         
         // ÖREB-Webservice-URL des betroffenen Kantons aus den Settings lesen.
         String serviceEndpoint = oerebServiceProperties.getServices().get(canton.toUpperCase());

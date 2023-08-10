@@ -65,14 +65,97 @@ public class MainController {
     // - PDF 
     
     @GetMapping("/extract/xml/")
-    public ResponseEntity<Object> getExtract(@RequestParam Map<String, String> queryParameters) {
+    public ResponseEntity<Object> getExtract(@RequestParam Map<String, String> queryParameters) throws URISyntaxException, IOException, InterruptedException {
         String egrid = queryParameters.get(PARAM_EGRID);
         log.debug("egrid: {}", egrid);
         
-        // getCantonFromEgrid()
-
+        if (egrid == null) {
+            throw new IllegalArgumentException("parameter EGRID expected");
+        }
         
-        return null;
+        String canton = null;
+        try {
+            canton = getCantonFromEgrid(egrid);
+            log.debug("canton by egrid from rest service request: " + canton);
+        } catch (NullPointerException e) {            
+            return new ResponseEntity<Object>(HttpStatus.NO_CONTENT);
+        }
+
+        String serviceEndpoint = oerebServiceProperties.getServices().get(canton.toUpperCase());
+        log.debug("service endpoint: {}", serviceEndpoint);
+        
+        if (serviceEndpoint == null) {
+            return new ResponseEntity<Object>(HttpStatus.NO_CONTENT);
+        }
+
+        String requestUrl = serviceEndpoint + "extract/xml/";
+
+        int i=0;
+        for (Map.Entry<String, String> entry : queryParameters.entrySet()) {
+            if (i==0) {
+                requestUrl += "?";
+            } else {
+                requestUrl += "&";
+            }
+            requestUrl += entry.getKey() + "=" + entry.getValue();
+            i++;
+        }
+        log.debug("ows extract request url: {}", requestUrl);
+
+        URI requestUri = new URI(requestUrl);
+
+        if (proxyMode.equalsIgnoreCase("proxy")) {
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
+            requestBuilder.GET().uri(requestUri);
+            HttpRequest request = requestBuilder.timeout(Duration.ofMinutes(2L)).build();
+
+            HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            int statusCode = response.statusCode();
+            String contentType = response.headers().firstValue("content-type").orElse("text/plain"); // Bewusst, zwecks Debugging.
+            
+            log.debug("ows extract response status code: {}", statusCode);
+            log.debug("ows extract content type: {}", contentType);
+            
+            InputStreamResource inputStreamResource = new InputStreamResource(response.body());
+            HttpHeaders httpHeaders = new HttpHeaders();
+            httpHeaders.add("Content-Type", contentType);
+            return new ResponseEntity<>(inputStreamResource, httpHeaders, HttpStatus.valueOf(statusCode));
+        } else if (proxyMode.equalsIgnoreCase("redirect"))  {
+            HttpHeaders httpHeaders = new HttpHeaders();
+            httpHeaders.setLocation(requestUri);
+            return new ResponseEntity<>(httpHeaders, HttpStatus.SEE_OTHER);        
+        } else {
+            throw new IllegalArgumentException("not valid proxy mode: " + proxyMode);
+        }
+    }
+    
+    private String getCantonFromEgrid(String egrid) throws URISyntaxException, IOException, InterruptedException {
+        String requestUrl = egridServiceUrl + egrid;
+        URI requestUri = new URI(requestUrl);
+        
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
+        requestBuilder.GET().uri(requestUri);
+        HttpRequest request = requestBuilder.timeout(Duration.ofMinutes(2L)).build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        
+        HashMap<String,Object> responseObj = objectMapper.readValue(response.body(), HashMap.class);
+        
+        Coordinate coord = null;
+        try {
+            ArrayList<Object> resultList = (ArrayList<Object>) responseObj.get("results");
+            HashMap<String,Object> attrs = (HashMap<String, Object>) ((HashMap<String,Object>)resultList.get(0)).get("attrs");
+            double easting = (Double) attrs.get("y");
+            double northing = (Double) attrs.get("x");
+            coord = new Coordinate(easting, northing);
+        } catch (NullPointerException | IndexOutOfBoundsException e) {
+            e.printStackTrace();
+            throw new NullPointerException(e.getMessage());
+        }
+        
+        String canton = getCantonFromCoord(coord);
+
+        return canton;
     }
     
 
@@ -110,7 +193,7 @@ public class MainController {
         String canton = null;
         try {
             canton = getCantonFromCoord(coord);
-            log.debug("canton from rest service request: " + canton);
+            log.debug("canton by coordinate from rest service request: " + canton);
         } catch (NullPointerException e) {            
             return new ResponseEntity<Object>(HttpStatus.NO_CONTENT);
         }
@@ -119,6 +202,10 @@ public class MainController {
         String serviceEndpoint = oerebServiceProperties.getServices().get(canton.toUpperCase());
         log.debug("service endpoint: {}", serviceEndpoint);
         
+        if (serviceEndpoint == null) {
+            return new ResponseEntity<Object>(HttpStatus.NO_CONTENT);
+        }
+
         String requestUrl = serviceEndpoint + "getegrid/xml/";
         
         int i=0;
@@ -131,7 +218,7 @@ public class MainController {
             requestUrl += entry.getKey() + "=" + entry.getValue();
             i++;
         }
-        log.debug("ows request url: {}", requestUrl);
+        log.debug("ows getegrid request url: {}", requestUrl);
         
         URI requestUri = new URI(requestUrl);
 
@@ -144,17 +231,19 @@ public class MainController {
             int statusCode = response.statusCode();
             String contentType = response.headers().firstValue("content-type").orElse("text/plain"); // Bewusst, zwecks Debugging.
             
-            log.debug("ows response status code: {}", statusCode);
-            log.debug("ows content type: {}", contentType);
+            log.debug("ows getegrid response status code: {}", statusCode);
+            log.debug("ows getegrid content type: {}", contentType);
             
             InputStreamResource inputStreamResource = new InputStreamResource(response.body());
             HttpHeaders httpHeaders = new HttpHeaders();
             httpHeaders.add("Content-Type", contentType);
             return new ResponseEntity<>(inputStreamResource, httpHeaders, HttpStatus.valueOf(statusCode));
-        } else {
+        } else if (proxyMode.equalsIgnoreCase("redirect"))  {
             HttpHeaders httpHeaders = new HttpHeaders();
             httpHeaders.setLocation(requestUri);
             return new ResponseEntity<>(httpHeaders, HttpStatus.SEE_OTHER);        
+        } else {
+            throw new IllegalArgumentException("not valid proxy mode: " + proxyMode);
         }
     }
     

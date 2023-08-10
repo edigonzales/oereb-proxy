@@ -14,6 +14,12 @@
 
 - https://geo.so.ch/api/oereb/extract/xml/?EGRID=CH807306583219
 - http://localhost:8080/extract/xml/?EGRID=CH807306583219
+- https://oereb.geo.bl.ch/extract/xml/?EGRID=CH767982496078
+- http://localhost:8080/extract/xml/?EGRID=CH767982496078
+
 
 ## Unterschiede zur Spez
 
+## Verhalten
+
+- Falls Kanton nicht "freigeschaltet", wird 204 zurückgeliefert.

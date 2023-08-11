@@ -23,6 +23,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -30,6 +31,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class MainController {
     private final Logger log = LoggerFactory.getLogger(this.getClass());
     
+    private static final String PARAM_CONST_PDF = "pdf";
+    private static final String PARAM_CONST_XML = "xml";
     private static final String PARAM_GNSS = "GNSS";
     private static final String PARAM_EN = "EN";
     private static final String PARAM_EGRID = "EGRID";
@@ -64,8 +67,12 @@ public class MainController {
     // TODO:
     // - PDF 
     
-    @GetMapping("/extract/xml/")
-    public ResponseEntity<Object> getExtract(@RequestParam Map<String, String> queryParameters) throws URISyntaxException, IOException, InterruptedException {
+    @GetMapping("/extract/{format}/")
+    public ResponseEntity<Object> getExtract(@PathVariable String format, @RequestParam Map<String, String> queryParameters) throws URISyntaxException, IOException, InterruptedException {
+        if(!format.equals(PARAM_CONST_XML) && !format.equals(PARAM_CONST_PDF)) {
+            throw new IllegalArgumentException("unsupported format <"+format+">");
+        }
+        
         String egrid = queryParameters.get(PARAM_EGRID);
         log.debug("egrid: {}", egrid);
         
@@ -88,7 +95,7 @@ public class MainController {
             return new ResponseEntity<Object>(HttpStatus.NO_CONTENT);
         }
 
-        String requestUrl = serviceEndpoint + "extract/xml/";
+        String requestUrl = serviceEndpoint + "extract/"+format+"/";
 
         int i=0;
         for (Map.Entry<String, String> entry : queryParameters.entrySet()) {

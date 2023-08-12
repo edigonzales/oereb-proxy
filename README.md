@@ -23,3 +23,5 @@
 ## Verhalten
 
 - Falls Kanton nicht "freigeschaltet", wird 204 zurückgeliefert.
+
+- CORS enabled für GET/OPTION

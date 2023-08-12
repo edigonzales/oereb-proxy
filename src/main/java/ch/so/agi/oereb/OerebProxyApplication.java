@@ -8,6 +8,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @SpringBootApplication
 @Configuration
@@ -17,6 +19,18 @@ public class OerebProxyApplication {
         SpringApplication.run(OerebProxyApplication.class, args);
     }
     
+    @Bean
+    public WebMvcConfigurer corsConfigurer() {
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/**").allowedMethods("GET", "OPTIONS")
+                .allowedOrigins("*")
+                .allowedHeaders("*");
+            }
+        };
+    }
+
     @Bean 
     HttpClient createHttpClient() {
         HttpClient httpClient = HttpClient.newBuilder()

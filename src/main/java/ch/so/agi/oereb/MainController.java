@@ -201,9 +201,6 @@ public class MainController {
         
         URI requestUri = new URI(requestUrl);
 
-        
-        System.out.println("**"+proxyMode+"**");
-
         if (proxyMode.equalsIgnoreCase("proxy")) {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
             requestBuilder.GET().uri(requestUri);

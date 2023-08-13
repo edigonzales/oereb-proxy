@@ -1,6 +1,12 @@
 server:
   forward-headers-strategy: framework
   port: 8080
+  tomcat:
+    threads:
+      max: ${TOMCAT_THREADS_MAX:50}
+      accept-count: ${TOMCAT_ACCEPT_COUNT:100}
+      max-connections: ${TOMCAT_MAX_CONNECTIONS:2000}
+
 
 management:
   endpoint:
@@ -16,8 +22,8 @@ management:
 logging:
   level:
     ch.so.agi: ${LOG_LEVEL_APP:DEBUG} 
-    org.springframework: ${LOG_LEVEL_FRAMEWORK:INFO} 
-
+    org.springframework: ${LOG_LEVEL_FRAMEWORK:INFO}
+   
 app:
   proxyMode: ${PROXY_MODE:proxy} 
   # proxy,redirect

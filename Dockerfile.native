@@ -1,0 +1,19 @@
+FROM bellsoft/alpaquita-linux-base:stream-glibc
+
+ARG UID=1001
+RUN adduser -S appuser -u $UID
+
+ENV HOME=/app
+WORKDIR $HOME
+
+RUN chown $UID $HOME \
+    && chmod "g+rwX" $HOME \
+    && chown $UID:root $HOME
+COPY --chown=$UID:root build/native/nativeCompile/oereb-proxy $HOME/application
+
+USER $UID
+EXPOSE 8080
+
+ENV LOG4J_FORMAT_MSG_NO_LOOKUPS=true
+
+CMD ["./application"]

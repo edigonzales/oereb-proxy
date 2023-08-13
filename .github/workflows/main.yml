@@ -1,0 +1,170 @@
+name: CI/CD
+
+on:
+  #schedule:
+  #  - cron: "0 * * * *"
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  # build-native:
+  #   env:
+  #     DOCKER_ACCOUNT: sogis
+  #     DOCKER_REPO: interlis-repo-checker
+  #     DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
+  #     DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}} 
+  #     BUILD_NUMBER: ${{ github.run_number }}
+  #     VERSION: 0.0.${{ github.run_number }}
+
+  #   runs-on: ubuntu-latest
+
+  #   steps:
+  #     - uses: actions/checkout@v2
+
+  #     - uses: actions/cache@v3
+  #       with:
+  #         path: |
+  #           ~/.gradle/caches
+  #           ~/.gradle/wrapper
+  #         key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+  #         restore-keys: |
+  #           ${{ runner.os }}-gradle-
+
+  #     - uses: graalvm/setup-graalvm@v1
+  #       with:
+  #         version: '22.3.0'
+  #         java-version: '17'
+  #         components: 'native-image'
+  #         #native-image-musl: 'true'
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+  #         cache: 'gradle'
+
+  #     - name: Build native image
+  #       run: |
+  #         ./gradlew clean aotTest nativeCompile -i
+  #         ls -la build/native/nativeCompile/
+
+  #     - uses: actions/upload-artifact@v2
+  #       if: ${{ failure() }}
+  #       with:
+  #         name: reports
+  #         path: build/reports/tests/
+
+  #     - name: Set up QEMU for amd64
+  #       uses: docker/setup-qemu-action@v2
+  #       with:
+  #         platforms: linux/amd64
+
+  #     - name: Set up Docker Buildx
+  #       uses: docker/setup-buildx-action@v2
+
+  #     - name: Docker meta
+  #       id: meta
+  #       uses: docker/metadata-action@v4
+  #       with:
+  #         images: ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}
+  #         labels: |
+  #           org.opencontainers.image.title=${{ env.DOCKER_REPO }}
+  #           org.opencontainers.image.version=${{ env.VERSION }}
+  #           org.opencontainers.image.base.name=docker.io/bellsoft/alpaquita-linux-base:stream-glibc
+  #         tags: |
+  #           type=raw,value=${{ env.VERSION }},enable=true,priority=200
+  #           type=raw,value=0.1,enable=true,priority=200
+  #           type=raw,value=0,enable=true,priority=200
+  #           type=raw,value=latest,enable=true,priority=200
+
+  #     - name: Login to GitHub Container Registry
+  #       uses: docker/login-action@v2
+  #       with:
+  #         username: ${{ secrets.DOCKER_USERNAME }}
+  #         password: ${{ secrets.DOCKER_PASSWORD }}
+  #       if: ${{ (github.ref == 'refs/heads/main') && (github.event_name != 'pull_request') && !env.ACT }}
+
+  #     - name: Single-platform build and push
+  #       uses: docker/build-push-action@v2
+  #       with:
+  #         platforms: linux/amd64
+  #         context: .
+  #         file: Dockerfile.native-alpaquita
+  #         tags: ${{ steps.meta.outputs.tags }}
+  #         labels: ${{ steps.meta.outputs.labels }}
+  #         pull: true
+  #         push: ${{ (github.ref == 'refs/heads/main') && (github.event_name != 'pull_request') && !env.ACT }}
+
+  build-jvm:
+    env:
+      DOCKER_ACCOUNT: sogis
+      DOCKER_REPO: oereb-proxy-jvm
+      DOCKER_PASSWORD: ${{secrets.DOCKER_PASSWORD}}
+      DOCKER_USERNAME: ${{secrets.DOCKER_USERNAME}} 
+      VERSION_MAJOR: "2"
+      VERSION_MINOR: "0"
+
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'liberica' 
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Build jar
+        run: |
+          ./gradlew clean build
+          ls -la build/libs/
+
+      - uses: actions/upload-artifact@v2
+        if: ${{ failure() }}
+        with:
+          name: reports
+          path: build/reports/tests/
+
+      - name: Set up QEMU for amd64 and arm64
+        uses: docker/setup-qemu-action@v2
+        with:
+          platforms: linux/amd64, linux/arm64
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}
+          labels: |
+            org.opencontainers.image.title=${{ env.DOCKER_REPO }}
+            org.opencontainers.image.version=${{ env.VERSION }}
+            org.opencontainers.image.base.name=docker.io/bellsoft/liberica-openjdk-alpine:17.0.8
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+        if: ${{ (github.ref == 'refs/heads/main') && (github.event_name != 'pull_request') && !env.ACT }}
+
+      - name: Multi-platform build and push
+        uses: docker/build-push-action@v2
+        with:
+          platforms:  linux/amd64, linux/arm64
+          context: .
+          file: Dockerfile.jvm
+          labels: ${{ steps.meta.outputs.labels }}
+          pull: true
+          push: ${{ (github.ref == 'refs/heads/main') && (github.event_name != 'pull_request') && !env.ACT }}
+          tags: |
+            ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:latest
+            ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}.${ GITHUB_RUN_NUMBER }
+            ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ env.VERSION_MAJOR }}.${{ env.VERSION_MINOR }}
+            ${{ env.DOCKER_ACCOUNT }}/${{ env.DOCKER_REPO }}:${{ env.VERSION_MAJOR }}

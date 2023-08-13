@@ -17,6 +17,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -55,18 +56,19 @@ public class MainController {
     @Autowired
     ObjectMapper objectMapper;
     
-    @Autowired
+    //@Autowired
     OerebServiceProperties oerebServiceProperties;
+    
+    public MainController(OerebServiceProperties oerebServiceProperties) {
+        this.oerebServiceProperties = oerebServiceProperties;
+    }
 
     @GetMapping("/")
     public ResponseEntity<String> ping() {
         log.info(proxyMode);
         return new ResponseEntity<String>("oereb-proxy", HttpStatus.OK);
     }
-    
-    // TODO:
-    // - PDF 
-    
+        
     @GetMapping("/extract/{format}/")
     public ResponseEntity<Object> getExtract(@PathVariable String format, @RequestParam Map<String, String> queryParameters) throws URISyntaxException, IOException, InterruptedException {
         if(!format.equals(PARAM_CONST_XML) && !format.equals(PARAM_CONST_PDF)) {
@@ -134,37 +136,7 @@ public class MainController {
         } else {
             throw new IllegalArgumentException("not valid proxy mode: " + proxyMode);
         }
-    }
-    
-    private String getCantonFromEgrid(String egrid) throws URISyntaxException, IOException, InterruptedException {
-        String requestUrl = egridServiceUrl + egrid;
-        URI requestUri = new URI(requestUrl);
-        
-        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
-        requestBuilder.GET().uri(requestUri);
-        HttpRequest request = requestBuilder.timeout(Duration.ofMinutes(2L)).build();
-
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        
-        HashMap<String,Object> responseObj = objectMapper.readValue(response.body(), HashMap.class);
-        
-        Coordinate coord = null;
-        try {
-            ArrayList<Object> resultList = (ArrayList<Object>) responseObj.get("results");
-            HashMap<String,Object> attrs = (HashMap<String, Object>) ((HashMap<String,Object>)resultList.get(0)).get("attrs");
-            double easting = (Double) attrs.get("y");
-            double northing = (Double) attrs.get("x");
-            coord = new Coordinate(easting, northing);
-        } catch (NullPointerException | IndexOutOfBoundsException e) {
-            e.printStackTrace();
-            throw new NullPointerException(e.getMessage());
-        }
-        
-        String canton = getCantonFromCoord(coord);
-
-        return canton;
-    }
-    
+    }    
 
     @GetMapping("/getegrid/xml/")
     public ResponseEntity<Object> getEgrid(@RequestParam Map<String, String> queryParameters) throws URISyntaxException, IOException, InterruptedException {
@@ -229,6 +201,9 @@ public class MainController {
         
         URI requestUri = new URI(requestUrl);
 
+        
+        System.out.println("**"+proxyMode+"**");
+
         if (proxyMode.equalsIgnoreCase("proxy")) {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
             requestBuilder.GET().uri(requestUri);
@@ -252,6 +227,35 @@ public class MainController {
         } else {
             throw new IllegalArgumentException("not valid proxy mode: " + proxyMode);
         }
+    }
+    
+    private String getCantonFromEgrid(String egrid) throws URISyntaxException, IOException, InterruptedException {
+        String requestUrl = egridServiceUrl + egrid;
+        URI requestUri = new URI(requestUrl);
+        
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
+        requestBuilder.GET().uri(requestUri);
+        HttpRequest request = requestBuilder.timeout(Duration.ofMinutes(2L)).build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        
+        HashMap<String,Object> responseObj = objectMapper.readValue(response.body(), HashMap.class);
+        
+        Coordinate coord = null;
+        try {
+            ArrayList<Object> resultList = (ArrayList<Object>) responseObj.get("results");
+            HashMap<String,Object> attrs = (HashMap<String, Object>) ((HashMap<String,Object>)resultList.get(0)).get("attrs");
+            double easting = (Double) attrs.get("y");
+            double northing = (Double) attrs.get("x");
+            coord = new Coordinate(easting, northing);
+        } catch (NullPointerException | IndexOutOfBoundsException e) {
+            e.printStackTrace();
+            throw new NullPointerException(e.getMessage());
+        }
+        
+        String canton = getCantonFromCoord(coord);
+
+        return canton;
     }
     
     private String getCantonFromCoord(Coordinate coord) throws URISyntaxException, IOException, InterruptedException {

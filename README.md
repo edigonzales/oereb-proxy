@@ -1,5 +1,7 @@
 # oereb-proxy
 
+_OEREB-Proxy_ ist ein einfacher Proxy-Service für die ÖREB-Kataster Webservice der Kantone. 
+
 - https://oereb.geo.bl.ch/getegrid/xml/?EN=2611819,1260126
 - https://geo.so.ch/api/oereb/getegrid/xml/?EN=2600595,1215629
 - https://geo.so.ch/api/oereb/getegrid/xml/?IDENTDN=SO0200002457&NUMBER=168

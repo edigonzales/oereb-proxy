@@ -227,6 +227,10 @@ public class MainController {
     }
     
     private String getCantonFromEgrid(String egrid) throws URISyntaxException, IOException, InterruptedException {
+        if (egrid.startsWith("LI")) {
+            return "LI";
+        }
+        
         String requestUrl = egridServiceUrl + egrid;
         URI requestUri = new URI(requestUrl);
         
@@ -268,11 +272,17 @@ public class MainController {
 
         HashMap<String,Object> responseObj = objectMapper.readValue(response.body(), HashMap.class);
         
+        System.out.println(responseObj);
+        
         String canton = null;
         try {
             ArrayList<Object> resultList = (ArrayList<Object>) responseObj.get("results");
             HashMap<String,Object> properties = (HashMap<String, Object>) ((HashMap<String,Object>)resultList.get(0)).get("properties");
-            canton = (String) properties.get("ak");
+            canton = (String) properties.get("kanton");
+            String municipality = (String) properties.get("gemname");
+            if (canton.isBlank() && !municipality.isBlank()) {
+                return "LI";
+            }
         } catch (NullPointerException | IndexOutOfBoundsException e) {
             e.printStackTrace();
             throw new NullPointerException(e.getMessage());

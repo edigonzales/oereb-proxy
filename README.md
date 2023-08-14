@@ -1,5 +1,9 @@
 # oereb-proxy
 
+## Ideen
+
+- Retry. Wie gut geht das mit normalen HttpClient?
+
 ## Beschreibung
 
 _OEREB-Proxy_ ist ein einfacher Proxy-Service für die ÖREB-Kataster Webservice der Kantone. Es gibt zwei Modi: "proxy" und "redirect". "Redirect" leitet zum kantonalen Webservice weiter. Im "proxy"-Modus wird der eigentliche Request vom _OEREB-Proxy_-Server gemacht und zurück an den Client geschickt. Anhand eines Requests muss der Kanton eruiert werden. Dazu wird die REST-API der BGDI verwendet.

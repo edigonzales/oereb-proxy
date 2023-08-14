@@ -272,7 +272,7 @@ public class MainController {
 
         HashMap<String,Object> responseObj = objectMapper.readValue(response.body(), HashMap.class);
         
-        System.out.println(responseObj);
+        System.out.println("*************"+responseObj);
         
         String canton = null;
         try {

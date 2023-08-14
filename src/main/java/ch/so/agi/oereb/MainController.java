@@ -272,8 +272,6 @@ public class MainController {
 
         HashMap<String,Object> responseObj = objectMapper.readValue(response.body(), HashMap.class);
         
-        System.out.println("*************"+responseObj);
-        
         String canton = null;
         try {
             ArrayList<Object> resultList = (ArrayList<Object>) responseObj.get("results");

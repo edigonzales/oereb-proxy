@@ -29,11 +29,7 @@ class OerebProxyApplicationTests {
     
     @Test
     public void getEgridByCoord_Ok() {
-        
-        String requestUrl = "http://localhost:" + port + "/getegrid/xml/?EN=2600595,1215629";
-        
-        System.out.println("****************************"+requestUrl);
-        
+        String requestUrl = "http://localhost:" + port + "/getegrid/xml/?EN=2600595,1215629";        
         ResponseEntity<String> entity = restTemplate.getForEntity(requestUrl, String.class);
         
         assertTrue(entity.getBody().contains("CH807306583219"));

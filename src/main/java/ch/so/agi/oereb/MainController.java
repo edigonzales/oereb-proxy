@@ -17,7 +17,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -36,16 +35,19 @@ public class MainController {
     private static final String PARAM_CONST_XML = "xml";
     private static final String PARAM_GNSS = "GNSS";
     private static final String PARAM_EN = "EN";
+    private static final String PARAM_LOCALISATION = "LOCALISATION";
+    private static final String PARAM_POSTALCODE = "POSTALCODE";
+    private static final String PARAM_NUMBER = "NUMBER";
     private static final String PARAM_EGRID = "EGRID";
 
     @Value("${app.proxyMode}")
     private String proxyMode;
 
-    @Value("${app.cantonServiceUrl}")
-    private String cantonServiceUrl;
+    @Value("${app.identifyServiceUrl}")
+    private String identifyServiceUrl;
 
-    @Value("${app.egridServiceUrl}")
-    private String egridServiceUrl;
+    @Value("${app.searchServiceUrl}")
+    private String searchServiceUrl;
 
     @Value("${app.reframeServiceUrl}")
     private String reframeServiceUrl;
@@ -142,41 +144,46 @@ public class MainController {
     public ResponseEntity<Object> getEgrid(@RequestParam Map<String, String> queryParameters) throws URISyntaxException, IOException, InterruptedException {
         String en = queryParameters.get(PARAM_EN);
         String gnss = queryParameters.get(PARAM_GNSS);
+        String postalcode = queryParameters.get(PARAM_POSTALCODE);
+        String localisation = queryParameters.get(PARAM_LOCALISATION);
+        String number = queryParameters.get(PARAM_NUMBER);
 
-        if (en == null && gnss == null) {
-            // Wahrscheinlich würde es mit Adresse noch funktionieren, indem man
-            // die Adresse sucht und anhand der Koordinate ein zweite Suche
-            // macht.
-            // Aber NBIdent und GB-Nummer ist m.E. chancenlos. Kann nicht mit
-            // map.geo irgendwas punkt ch gelöst werden. 
-            // Nur mit allen Endpunkten absuchen, was zu langsam ist.
-            throw new IllegalArgumentException("parameter EN or GNSS expected");
-        }
-        
-        // Koordinaten ggf. von WGS84 nach LV95 transfromieren.
-        Coordinate coord;
-        if (gnss != null) {
-            double lon = Double.valueOf(gnss.split(",")[0]);
-            double lat = Double.valueOf(gnss.split(",")[1]);
-            coord = lv95ToWgs84(lon, lat);
-            log.debug("coordinate after transformation: {}", coord);
-        } else {
-            coord = new Coordinate(Double.valueOf(en.split(",")[0]), Double.valueOf(en.split(",")[1]));
-            log.debug("coordinate: {}", coord);
-        }
-        
-        // Betroffener Kanton via geo.admin.ch rest api eruieren.
-        // Falls der Kanton nicht gefunden werden kann, wird 204 
-        // zurückgeliefert. Beim Parsen der Antwort werden Exceptions
-        // geworfen, wenn kein Kanton in der Antwort vorhanden ist.
         String canton = null;
-        try {
-            canton = getCantonFromCoord(coord);
-            log.debug("canton by coordinate from rest service request: " + canton);
-        } catch (NullPointerException e) {            
-            return new ResponseEntity<Object>(HttpStatus.NO_CONTENT);
+        if (en != null || gnss != null) {
+            // Koordinaten ggf. von WGS84 nach LV95 transfromieren.
+            Coordinate coord;
+            if (gnss != null) {
+                double lon = Double.valueOf(gnss.split(",")[0]);
+                double lat = Double.valueOf(gnss.split(",")[1]);
+                coord = lv95ToWgs84(lon, lat);
+                log.debug("coordinate after transformation: {}", coord);
+            } else {
+                coord = new Coordinate(Double.valueOf(en.split(",")[0]), Double.valueOf(en.split(",")[1]));
+                log.debug("coordinate: {}", coord);
+            }
+            
+            // Betroffener Kanton via geo.admin.ch rest api eruieren.
+            // Falls der Kanton nicht gefunden werden kann, wird 204 
+            // zurückgeliefert. Beim Parsen der Antwort werden Exceptions
+            // geworfen, wenn kein Kanton in der Antwort vorhanden ist.
+            try {
+                canton = getCantonFromCoord(coord);
+                log.debug("canton by coordinate from rest service request: " + canton);
+            } catch (NullPointerException e) {            
+                return new ResponseEntity<Object>(HttpStatus.NO_CONTENT);
+            }
+        } else if (postalcode != null && localisation != null) {
+            //getEgridByAddress()            
+            try {
+                canton = getCantonByAddress(postalcode, localisation, number);
+                log.debug("canton by address from rest service request: " + canton);
+            } catch (NullPointerException e) {            
+                return new ResponseEntity<Object>(HttpStatus.NO_CONTENT);
+            }
+        } else {
+            throw new IllegalArgumentException("request is not supported");            
         }
-        
+
         // ÖREB-Webservice-URL des betroffenen Kantons aus den Settings lesen.
         String serviceEndpoint = oerebServiceProperties.getServices().get(canton.toUpperCase());
         log.debug("service endpoint: {}", serviceEndpoint);
@@ -226,12 +233,8 @@ public class MainController {
         }
     }
     
-    private String getCantonFromEgrid(String egrid) throws URISyntaxException, IOException, InterruptedException {
-        if (egrid.startsWith("LI")) {
-            return "LI";
-        }
-        
-        String requestUrl = egridServiceUrl + egrid;
+    private String getCantonByAddress(String postalcode, String localisation, String number) throws IOException, InterruptedException, URISyntaxException {
+        String requestUrl = (searchServiceUrl + postalcode + "%20" + localisation + (number!=null?"%20"+number:"")).trim();
         URI requestUri = new URI(requestUrl);
         
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
@@ -240,6 +243,39 @@ public class MainController {
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         
+        HashMap<String,Object> responseObj = objectMapper.readValue(response.body(), HashMap.class);
+        
+        // Es können mehrere Adressen zurückgeliefert werden. Wir verwenden die erste.
+        Coordinate coord = null;
+        try {
+            ArrayList<Object> resultList = (ArrayList<Object>) responseObj.get("results");
+            HashMap<String,Object> attrs = (HashMap<String, Object>) ((HashMap<String,Object>)resultList.get(0)).get("attrs");
+            double easting = (Double) attrs.get("y");
+            double northing = (Double) attrs.get("x");
+            coord = new Coordinate(easting, northing);
+        } catch (NullPointerException | IndexOutOfBoundsException e) {
+            e.printStackTrace();
+            throw new NullPointerException(e.getMessage());
+        }
+
+        String canton = getCantonFromCoord(coord);
+
+        return canton;
+    }
+    
+    private String getCantonFromEgrid(String egrid) throws URISyntaxException, IOException, InterruptedException {
+        if (egrid.startsWith("LI")) {
+            return "LI";
+        }
+        
+        String requestUrl = searchServiceUrl + egrid;
+        URI requestUri = new URI(requestUrl);
+        
+        HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
+        requestBuilder.GET().uri(requestUri);
+        HttpRequest request = requestBuilder.timeout(Duration.ofMinutes(2L)).build();
+
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         HashMap<String,Object> responseObj = objectMapper.readValue(response.body(), HashMap.class);
         
         Coordinate coord = null;
@@ -261,7 +297,7 @@ public class MainController {
     
     private String getCantonFromCoord(Coordinate coord) throws URISyntaxException, IOException, InterruptedException {
         String coordString = String.valueOf(coord.easting()) + "," + String.valueOf(coord.northing());
-        String requestUrl = cantonServiceUrl + coordString;
+        String requestUrl = identifyServiceUrl + coordString;
         URI requestUri = new URI(requestUrl);
         
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
@@ -269,7 +305,6 @@ public class MainController {
         HttpRequest request = requestBuilder.timeout(Duration.ofMinutes(2L)).build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
         HashMap<String,Object> responseObj = objectMapper.readValue(response.body(), HashMap.class);
         
         String canton = null;
@@ -298,7 +333,6 @@ public class MainController {
         HttpRequest request = requestBuilder.timeout(Duration.ofMinutes(2L)).build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        
         HashMap<String,Object> responseObj = objectMapper.readValue(response.body(), HashMap.class);
         List<Double> coords = (List<Double>) responseObj.get("coordinates");
         

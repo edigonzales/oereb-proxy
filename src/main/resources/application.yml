@@ -28,8 +28,8 @@ app:
   proxyMode: ${PROXY_MODE:proxy} 
   # proxy,redirect
   #cantonServiceUrl: ${CANTON_SERVICE_URL:https://api3.geo.admin.ch/rest/services/all/MapServer/identify?geometryFormat=geojson&geometryType=esriGeometryPoint&lang=en&layers=all:ch.swisstopo.swissboundaries3d-kanton-flaeche.fill&limit=1&returnGeometry=false&sr=2056&tolerance=0&geometry=}
-  cantonServiceUrl: ${CANTON_SERVICE_URL:https://api3.geo.admin.ch/rest/services/all/MapServer/identify?geometryFormat=geojson&geometryType=esriGeometryPoint&lang=en&layers=all:ch.swisstopo.swissboundaries3d-gemeinde-flaeche.fill&limit=1&returnGeometry=false&sr=2056&tolerance=0&geometry=}
-  egridServiceUrl: ${EGRID_SERVICE_URL:https://api3.geo.admin.ch/rest/services/ech/SearchServer?sr=2056&lang=en&type=locations&searchText=}
+  identifyServiceUrl: ${IDENTIFY_SERVICE_URL:https://api3.geo.admin.ch/rest/services/all/MapServer/identify?geometryFormat=geojson&geometryType=esriGeometryPoint&lang=en&layers=all:ch.swisstopo.swissboundaries3d-gemeinde-flaeche.fill&limit=1&returnGeometry=false&sr=2056&tolerance=0&geometry=}
+  searchServiceUrl: ${SEARCH_SERVICE_URL:https://api3.geo.admin.ch/rest/services/ech/SearchServer?sr=2056&lang=en&type=locations&searchText=}
   reframeServiceUrl: ${REFRAME_SERVICE_URL:https://geodesy.geo.admin.ch/reframe/wgs84tolv95}
   
 oereb: 

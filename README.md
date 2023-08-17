@@ -27,6 +27,7 @@ Formate:
 
 Beispiele:
 
+ - http://localhost:8080/getegrid/xml/?POSTALCODE=3254&LOCALISATION=Hauptstrasse&NUMBER=25
  - http://localhost:8080/getegrid/xml/?EN=2600595,1215629
  - http://localhost:8080/getegrid/xml/?EN=2757735,1224129 (LI)
  - http://localhost:8080/getegrid/xml/?IDENTDN=SO0200002457&NUMBER=168
@@ -34,6 +35,7 @@ Beispiele:
  - http://localhost:8080/extract/xml/?EGRID=CH807306583219
  - http://localhost:8080/extract/xml/?EGRID=CH767982496078
 
+ - https://geo.so.ch/api/oereb/getegrid/xml/?POSTALCODE=3254&LOCALISATION=Hauptstrasse&NUMBER=25
  - https://oereb.geo.bl.ch/getegrid/xml/?EN=2611819,1260126
  - https://geo.so.ch/api/oereb/getegrid/xml/?EN=2600595,1215629
  - https://geo.so.ch/api/oereb/getegrid/xml/?IDENTDN=SO0200002457&NUMBER=168
@@ -55,8 +57,8 @@ Die Anwendung kann am einfachsten mittels Env-Variablen gesteuert werden. Es ste
 | Name | Beschreibung | Standard |
 |-----|-----|-----|
 | `PROXY_MODE` | Proxy-Modus. | `proxy` |
-| `CANTON_SERVICE_URL` | BGDI-REST-API, um Kanton anhand einer Koordinate zu eruieren. | `https://api3.geo.admin.ch/rest/services/all/MapServer/identify?geometryFormat=geojson&geometryType=esriGeometryPoint&lang=en&layers=all:ch.swisstopo.swissboundaries3d-kanton-flaeche.fill&limit=1&returnGeometry=false&sr=2056&tolerance=0&geometry=` |
-| `EGRID_SERVICE_URL` | BGDI-REST-API, um Koordinate anhand eines EGRID zu eruieren. | `https://api3.geo.admin.ch/rest/services/ech/SearchServer?sr=2056&lang=en&type=locations&searchText=` |
+| `IDENTIFY_SERVICE_URL` | BGDI-REST-API, um Kanton anhand einer Koordinate zu eruieren. | `https://api3.geo.admin.ch/rest/services/all/MapServer/identify?geometryFormat=geojson&geometryType=esriGeometryPoint&lang=en&layers=all:ch.swisstopo.swissboundaries3d-kanton-flaeche.fill&limit=1&returnGeometry=false&sr=2056&tolerance=0&geometry=` |
+| `SEARCH_SERVICE_URL` | BGDI-REST-API, um Koordinate anhand eines EGRID zu eruieren. | `https://api3.geo.admin.ch/rest/services/ech/SearchServer?sr=2056&lang=en&type=locations&searchText=` |
 | `REFRAME_SERVICE_URL` | BGDI-REST-API, um Koordinate von WGS84 nach LV95 zu transformieren. | `https://geodesy.geo.admin.ch/reframe/wgs84tolv95` |
 | `LOG_LEVEL_APP` | Loglevel der eigenen Businesslogik. | `DEBUG` |
 | `LOG_LEVEL_FRAMEWORK` | Loglevel des Frameworks. | `INFO` |

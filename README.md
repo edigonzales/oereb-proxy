@@ -23,7 +23,7 @@ Formate:
  - PDF
 
  Aufrufe:
- - EN, GNSS und IdentDN und GB-Nummer für GetEgrid. Meines Erachtes ist es nicht möglich eindeutig den EGRID via BGDI und Adresse herauszufinden.
+ - EN, GNSS und Adresse für GetEgrid. Meines Erachtes ist es nicht möglich eindeutig den EGRID via BGDI und NBIdent und GB-Nummer herauszufinden.
 
 Beispiele:
 

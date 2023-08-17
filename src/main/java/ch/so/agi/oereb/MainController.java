@@ -39,6 +39,8 @@ public class MainController {
     private static final String PARAM_POSTALCODE = "POSTALCODE";
     private static final String PARAM_NUMBER = "NUMBER";
     private static final String PARAM_EGRID = "EGRID";
+    private static final String METHOD_EXTRACT = "extract";
+    private static final String METHOD_GETEGRID = "getegrid";
 
     @Value("${app.proxyMode}")
     private String proxyMode;
@@ -71,6 +73,106 @@ public class MainController {
         return new ResponseEntity<String>("oereb-proxy", HttpStatus.OK);
     }
         
+    @GetMapping("/{canton}/{method:getegrid|extract}/{format:xml|pdf}/")
+    public ResponseEntity<Object> versions(@PathVariable String canton, @PathVariable String method, @PathVariable String format, @RequestParam Map<String, String> queryParameters) throws URISyntaxException, IOException, InterruptedException {
+        log.debug("canton: {}", canton);
+        log.debug("method: {}", method);
+        log.debug("format: {}", format);
+        
+        if (method.equals(METHOD_GETEGRID) && format.equals(PARAM_CONST_PDF)) {
+            throw new IllegalArgumentException("format not supported");
+        }
+        
+        String serviceEndpoint = oerebServiceProperties.getServices().get(canton.toUpperCase());
+        log.debug("service endpoint: {}", serviceEndpoint);
+
+        if (serviceEndpoint == null) {
+            return new ResponseEntity<Object>(HttpStatus.NO_CONTENT);
+        }
+
+        String requestUrl = serviceEndpoint + method + "/xml";
+
+        int i=0;
+        for (Map.Entry<String, String> entry : queryParameters.entrySet()) {
+            if (i==0) {
+                requestUrl += "?";
+            } else {
+                requestUrl += "&";
+            }
+            requestUrl += entry.getKey() + "=" + entry.getValue();
+            i++;
+        }
+        log.debug("ows "+method+" request url: {}", requestUrl);
+
+        URI requestUri = new URI(requestUrl);
+
+        if (proxyMode.equalsIgnoreCase("proxy")) {
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
+            requestBuilder.GET().uri(requestUri);
+            HttpRequest request = requestBuilder.timeout(Duration.ofMinutes(2L)).build();
+
+            HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            int statusCode = response.statusCode();
+            String contentType = response.headers().firstValue("content-type").orElse("text/plain"); // Bewusst, zwecks Debugging.
+            
+            log.debug("ows "+method+" response status code: {}", statusCode);
+            log.debug("ows "+method+" content type: {}", contentType);
+            
+            InputStreamResource inputStreamResource = new InputStreamResource(response.body());
+            HttpHeaders httpHeaders = new HttpHeaders();
+            httpHeaders.add("Content-Type", contentType);
+            return new ResponseEntity<>(inputStreamResource, httpHeaders, HttpStatus.valueOf(statusCode));
+        } else if (proxyMode.equalsIgnoreCase("redirect"))  {
+            HttpHeaders httpHeaders = new HttpHeaders();
+            httpHeaders.setLocation(requestUri);
+            return new ResponseEntity<>(httpHeaders, HttpStatus.SEE_OTHER);        
+        } else {
+            throw new IllegalArgumentException("not valid proxy mode: " + proxyMode);
+        }
+    }
+    
+    @GetMapping("/{canton}/{method:versions|capabilities}/xml")
+    public ResponseEntity<Object> getMetaInfo(@PathVariable String canton, @PathVariable String method) throws URISyntaxException, IOException, InterruptedException {
+        log.debug("canton: {}", canton);
+        log.debug("method: {}", method);
+
+        String serviceEndpoint = oerebServiceProperties.getServices().get(canton.toUpperCase());
+        log.debug("service endpoint: {}", serviceEndpoint);
+
+        if (serviceEndpoint == null) {
+            return new ResponseEntity<Object>(HttpStatus.NO_CONTENT);
+        }
+
+        String requestUrl = serviceEndpoint + method + "/xml";
+        log.debug("ows "+method+" request url: {}", requestUrl);
+
+        URI requestUri = new URI(requestUrl);
+
+        if (proxyMode.equalsIgnoreCase("proxy")) {
+            HttpRequest.Builder requestBuilder = HttpRequest.newBuilder();
+            requestBuilder.GET().uri(requestUri);
+            HttpRequest request = requestBuilder.timeout(Duration.ofMinutes(2L)).build();
+
+            HttpResponse<InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            int statusCode = response.statusCode();
+            String contentType = response.headers().firstValue("content-type").orElse("text/plain"); // Bewusst, zwecks Debugging.
+            
+            log.debug("ows "+method+" response status code: {}", statusCode);
+            log.debug("ows "+method+" content type: {}", contentType);
+            
+            InputStreamResource inputStreamResource = new InputStreamResource(response.body());
+            HttpHeaders httpHeaders = new HttpHeaders();
+            httpHeaders.add("Content-Type", contentType);
+            return new ResponseEntity<>(inputStreamResource, httpHeaders, HttpStatus.valueOf(statusCode));
+        } else if (proxyMode.equalsIgnoreCase("redirect"))  {
+            HttpHeaders httpHeaders = new HttpHeaders();
+            httpHeaders.setLocation(requestUri);
+            return new ResponseEntity<>(httpHeaders, HttpStatus.SEE_OTHER);        
+        } else {
+            throw new IllegalArgumentException("not valid proxy mode: " + proxyMode);
+        }
+    }
+    
     @GetMapping("/extract/{format}/")
     public ResponseEntity<Object> getExtract(@PathVariable String format, @RequestParam Map<String, String> queryParameters) throws URISyntaxException, IOException, InterruptedException {
         if(!format.equals(PARAM_CONST_XML) && !format.equals(PARAM_CONST_PDF)) {
